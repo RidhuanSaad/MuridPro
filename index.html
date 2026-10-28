@@ -1,0 +1,190 @@
+
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MuridPro | Pengurusan Murid</title>
+<style>
+:root{--g:#173d35;--a:#286553;--bg:#f4f7f5;--line:#e0e8e3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#23332c;font:15px Arial,sans-serif}
+header{background:var(--g);color:white;padding:22px}
+header h1{margin:0;font-size:25px}
+header p{margin:7px 0 0;color:#d7e7df}
+main{max-width:1000px;margin:auto;padding:20px}
+h2{margin-top:5px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}
+.stat,.panel{background:white;border:1px solid var(--line);border-radius:13px;padding:16px}
+.stat strong{display:block;font-size:26px;color:var(--g);margin-top:8px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px}
+button{border:0;border-radius:8px;padding:11px 14px;background:#e6eee9;color:var(--g);font-weight:bold;cursor:pointer}
+button.primary{background:var(--a);color:white}
+input,select{padding:11px;border:1px solid #d5e0d9;border-radius:8px;max-width:100%;width:100%;background:white}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.tools input{flex:1;min-width:150px}
+table{width:100%;border-collapse:collapse;min-width:540px}
+th,td{text-align:left;padding:11px;border-bottom:1px solid var(--line);font-size:13px}
+th{background:#f5f8f6}
+.scroll{overflow-x:auto;margin-top:12px}
+.hide{display:none!important}
+label{display:block;font-size:13px;margin:12px 0}
+label input,label select{display:block;margin-top:6px}
+.note{font-size:12px;color:#64746c;line-height:1.6}
+#form{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.full{grid-column:1/-1}
+@media(max-width:600px){main{padding:13px}.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}header{padding:18px}#form{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<header>
+<h1>◈ MuridPro</h1>
+<p>Sistem Pengurusan Murid</p>
+</header>
+<main>
+<h2>Dashboard</h2>
+<p class="note">Urus senarai murid, kehadiran dan markah dalam satu tempat.</p>
+<div class="stats">
+<div class="stat">Jumlah murid<strong id="total">0</strong></div>
+<div class="stat">Jumlah kelas<strong id="classes">0</strong></div>
+<div class="stat">Purata markah<strong id="average">—</strong></div>
+</div>
+<nav>
+<button onclick="show('murid')">Senarai murid</button>
+<button onclick="show('hadir')">Kehadiran</button>
+<button onclick="show('markah')">Markah</button>
+<button onclick="show('backup')">Data & sandaran</button>
+</nav>
+<section class="panel" id="murid">
+<h3>Senarai murid</h3>
+<div class="tools">
+<input id="search" placeholder="Cari nama atau kelas..." oninput="render()">
+<button class="primary" onclick="newStudent()">+ Tambah murid</button>
+</div>
+<form id="form" class="hide" onsubmit="saveStudent(event)">
+<input type="hidden" id="sid">
+<label>Nama murid *
+<input id="name" required maxlength="120"></label>
+<label>Kelas *
+<input id="className" required maxlength="50" placeholder="Contoh: 4 Safar"></label>
+<label>Nama penjaga (pilihan)
+<input id="guardian" maxlength="120"></label>
+<label>No. telefon penjaga (pilihan)
+<input id="phone" maxlength="30"></label>
+<div class="full tools">
+<button class="primary" type="submit">Simpan</button>
+<button type="button" onclick="cancelForm()">Batal</button>
+</div>
+</form>
+<div class="scroll"><table>
+<thead><tr><th>Nama</th><th>Kelas</th><th>Penjaga</th><th>Tindakan</th></tr></thead>
+<tbody id="rows"></tbody>
+</table></div>
+</section>
+<section class="panel hide" id="hadir">
+<h3>Kehadiran murid</h3>
+<label>Tarikh<input type="date" id="date"></label>
+<div class="tools">
+<button onclick="allPresent()">Semua hadir</button>
+<button class="primary" onclick="saveAttendance()">Simpan kehadiran</button>
+</div>
+<div class="scroll"><table><thead><tr><th>Nama</th><th>Kelas</th><th>Status</th></tr></thead><tbody id="attendanceRows"></tbody></table></div>
+</section>
+<section class="panel hide" id="markah">
+<h3>Markah peperiksaan</h3>
+<label>Nama penilaian<input id="exam" placeholder="Contoh: Ujian 1"></label>
+<div class="scroll"><table><thead><tr><th>Nama</th><th>Kelas</th><th>Markah / 100</th></tr></thead><tbody id="gradeRows"></tbody></table></div>
+<button class="primary" onclick="saveGrades()">Simpan markah</button>
+</section>
+<section class="panel hide" id="backup">
+<h3>Data & sandaran</h3>
+<div class="tools">
+<button class="primary" onclick="backup()">Muat turun sandaran</button>
+<button onclick="document.getElementById('file').click()">Import sandaran</button>
+<input id="file" type="file" accept=".json" class="hide" onchange="restore(event)">
+<button onclick="exportCSV()">Eksport senarai CSV</button>
+<button onclick="print()">Cetak / PDF</button>
+</div>
+<p class="note">Data disimpan pada pelayar peranti ini sahaja. Data tidak diselaraskan antara peranti. Jangan masukkan maklumat sensitif murid dalam versi percubaan.</p>
+<button onclick="clearData()">Padam semua data</button>
+</section>
+<p class="note">MuridPro · Lindungi privasi murid.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const key='muridpro_data_v1';
+let db={students:[],attendance:{},grades:{}};
+try{db=JSON.parse(localStorage.getItem(key))||db}catch(e){}
+if(!Array.isArray(db.students))db={students:[],attendance:{},grades:{}};
+const today=new Date();
+$('date').value=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+function persist(){localStorage.setItem(key,JSON.stringify(db));render()}
+function safe(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function show(id){['murid','hadir','markah','backup'].forEach(x=>$(x).classList.toggle('hide',x!==id));if(id==='hadir')renderAttendance();if(id==='markah')renderGrades()}
+function render(){
+$('total').textContent=db.students.length;
+$('classes').textContent=new Set(db.students.map(s=>s.className)).size;
+const marks=Object.values(db.grades).map(x=>Number(x.mark)).filter(n=>Number.isFinite(n));
+$('average').textContent=marks.length?Math.round(marks.reduce((a,b)=>a+b,0)/marks.length):'—';
+const q=$('search').value.toLowerCase();
+$('rows').innerHTML=db.students.filter(s=>(s.name+' '+s.className).toLowerCase().includes(q)).map(s=>`<tr><td>${safe(s.name)}</td><td>${safe(s.className)}</td><td>${safe(s.guardian||'—')}</td><td><button onclick="editStudent('${s.id}')">Edit</button> <button onclick="removeStudent('${s.id}')">Padam</button></td></tr>`).join('');
+renderAttendance();renderGrades();
+}
+function newStudent(){$('form').reset();$('sid').value='';$('form').classList.remove('hide');$('name').focus()}
+function cancelForm(){$('form').classList.add('hide')}
+function saveStudent(e){
+e.preventDefault();
+const id=$('sid').value||('m'+Date.now());
+const s={id,name:$('name').value.trim(),className:$('className').value.trim(),guardian:$('guardian').value.trim(),phone:$('phone').value.trim()};
+const i=db.students.findIndex(x=>x.id===id);
+if(i>=0)db.students[i]=s;else db.students.push(s);
+cancelForm();persist();
+}
+function editStudent(id){
+const s=db.students.find(x=>x.id===id);if(!s)return;
+$('sid').value=s.id;$('name').value=s.name;$('className').value=s.className;$('guardian').value=s.guardian||'';$('phone').value=s.phone||'';
+$('form').classList.remove('hide');$('name').focus();
+}
+function removeStudent(id){
+const s=db.students.find(x=>x.id===id);if(!s||!confirm('Padam rekod '+s.name+'?'))return;
+db.students=db.students.filter(x=>x.id!==id);delete db.grades[id];
+Object.values(db.attendance).forEach(d=>delete d[id]);persist();
+}
+function renderAttendance(){
+const day=db.attendance[$('date').value]||{};
+$('attendanceRows').innerHTML=db.students.map(s=>`<tr><td>${safe(s.name)}</td><td>${safe(s.className)}</td><td><select data-att="${s.id}"><option ${day[s.id]==='Hadir'?'selected':''}>Hadir</option><option ${day[s.id]==='Tidak hadir'?'selected':''}>Tidak hadir</option><option ${day[s.id]==='Lewat'?'selected':''}>Lewat</option><option ${day[s.id]==='Cuti'?'selected':''}>Cuti</option></select></td></tr>`).join('');
+}
+function allPresent(){$$(' [data-att]')}
+function $$(selector){return document.querySelectorAll(selector)}
+function allPresent(){document.querySelectorAll('[data-att]').forEach(x=>x.value='Hadir')}
+function saveAttendance(){
+const d={};document.querySelectorAll('[data-att]').forEach(x=>d[x.dataset.att]=x.value);
+db.attendance[$('date').value]=d;persist();alert('Kehadiran disimpan pada peranti ini.');
+}
+function renderGrades(){
+$('gradeRows').innerHTML=db.students.map(s=>`<tr><td>${safe(s.name)}</td><td>${safe(s.className)}</td><td><input type="number" min="0" max="100" data-grade="${s.id}" value="${db.grades[s.id]?.mark??''}" placeholder="0–100"></td></tr>`).join('');
+}
+function saveGrades(){
+const g={};document.querySelectorAll('[data-grade]').forEach(x=>{if(x.value!==''&&Number(x.value)>=0&&Number(x.value)<=100)g[x.dataset.grade]={mark:Number(x.value)}});
+db.grades=g;persist();alert('Markah disimpan pada peranti ini.');
+}
+function backup(){
+const b=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='sandaran-muridpro.json';a.click();URL.revokeObjectURL(a.href);
+}
+function restore(e){
+const f=e.target.files[0];if(!f)return;
+const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(!Array.isArray(x.students)||!confirm('Gantikan data semasa?'))return;db={students:x.students,attendance:x.attendance||{},grades:x.grades||{}};persist();alert('Sandaran diimport.')}catch(err){alert('Fail sandaran tidak sah.')}};
+r.readAsText(f);e.target.value='';
+}
+function exportCSV(){
+const rows=[['Nama','Kelas','Penjaga','Telefon'],...db.students.map(s=>[s.name,s.className,s.guardian||'',s.phone||''])];
+const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='senarai-murid.csv';a.click();URL.revokeObjectURL(a.href);
+}
+function clearData(){if(confirm('Padam SEMUA rekod dalam peranti ini?')){db={students:[],attendance:{},grades:{}};persist()}}
+$('date').addEventListener('change',renderAttendance);
+render();
+</script>
+</body>
+</html>
